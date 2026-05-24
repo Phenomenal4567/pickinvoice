@@ -44,14 +44,24 @@ export function SettingsClient({ profile: initial }: { profile: BusinessProfile 
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) { alert('Logo must be under 2MB'); return; }
-    setLogoPreview(URL.createObjectURL(file));
+    const blobUrl = URL.createObjectURL(file);
+    setLogoPreview(blobUrl);
     setLogoUploading(true);
-    const fd = new FormData();
-    fd.append('file', file);
-    const res = await fetch('/api/upload', { method: 'POST', body: fd });
-    const { logo_url } = await res.json();
-    setProfile(p => ({ ...p, logo_url }));
-    setLogoUploading(false);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      if (!res.ok) throw new Error('Upload failed');
+      const { logo_url } = await res.json();
+      setLogoPreview(logo_url);
+      setProfile(p => ({ ...p, logo_url }));
+    } catch {
+      alert('Logo upload failed. Please try again.');
+      setLogoPreview(profile.logo_url || '');
+    } finally {
+      setLogoUploading(false);
+      URL.revokeObjectURL(blobUrl);
+    }
   }
 
 async function handleSave() {
