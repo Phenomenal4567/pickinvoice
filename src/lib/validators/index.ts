@@ -18,7 +18,6 @@ export const businessProfileSchema = z.object({
   address: z.string().max(500).optional(),
   city: z.string().max(100).optional(),
   state: z.string().max(100).optional(),
-  lga: z.string().max(100).optional(),
   country: z.string().max(100).optional(),
   tax_number: z.string().max(50).optional(),
   reg_number: z.string().max(50).optional(),
