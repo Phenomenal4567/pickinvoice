@@ -349,7 +349,7 @@ export function InvoiceEditor({ mode, docType, profile, clients, products, docum
                       {t}
                     </button>
                     {isLocked && (
-                      <span className="absolute -top-1.5 -right-1.5 bg-amber-400 text-white text-[9px] font-bold rounded-full px-1 shadow">PRO</span>
+                      <span className="absolute -top-1.5 -right-1.5 bg-amber-400 text-white text-[9px] font-bold rounded-full px-1 shadow">PREMIUM</span>
                     )}
                   </div>
                 );
@@ -365,7 +365,7 @@ export function InvoiceEditor({ mode, docType, profile, clients, products, docum
           {/* Client */}
           <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
             <h3 className="font-semibold text-gray-900 text-sm mb-3">
-              {docType === 'invoice' ? 'Bill To' : 'Customer (optional)'}
+              {docType === 'invoice' ? 'Bill To' : 'Customer'}
             </h3>
             {clients.length > 0 && (
               <div className="mb-3">
