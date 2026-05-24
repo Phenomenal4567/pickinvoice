@@ -13,6 +13,8 @@ export function OnboardingClient() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [logoPreview, setLogoPreview] = useState('');
+  // FIX: added error state so failures surface in the UI instead of silently failing
+  const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
@@ -45,17 +47,33 @@ export function OnboardingClient() {
     setLogoPreview(URL.createObjectURL(file));
   }
 
+  // FIX: was silently ignoring the 400 response and calling router.push('/dashboard') anyway.
+  // The API returned 400 because the Zod schema rejected empty-string email values.
+  // Now we check res.ok and surface the error before ever attempting the redirect.
   async function handleFinish() {
     setLoading(true);
+    setError('');
     try {
-      // Save profile
-      await fetch('/api/profile', {
+      const res = await fetch('/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, onboarding_completed: true }),
       });
 
-      // Upload logo if provided
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        // Zod flatten() puts field errors in fieldErrors and top-level in formErrors
+        const fieldErrors = body?.error?.fieldErrors
+          ? Object.entries(body.error.fieldErrors)
+              .map(([k, v]) => `${k}: ${(v as string[]).join(', ')}`)
+              .join(' | ')
+          : null;
+        const msg = fieldErrors || body?.error || `Server error (${res.status})`;
+        setError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+        return;
+      }
+
+      // Upload logo if provided — non-fatal if it fails
       if (logoFile) {
         const fd = new FormData();
         fd.append('file', logoFile);
@@ -63,22 +81,41 @@ export function OnboardingClient() {
       }
 
       router.push('/dashboard');
-    } catch {
-      alert('Something went wrong. Please try again.');
+    } catch (err) {
+      setError('Network error — please check your connection and try again.');
+      console.error('[onboarding] handleFinish error:', err);
     } finally {
       setLoading(false);
     }
   }
 
+  // FIX: was not awaiting the fetch result and not handling errors,
+  // so if the POST failed the redirect still happened and dashboard would
+  // find no completed profile and redirect back — causing a loop.
   async function handleSkip() {
     setLoading(true);
-    await fetch('/api/profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ business_name: form.business_name || 'My Business', onboarding_completed: true }),
-    });
-    router.push('/dashboard');
-    setLoading(false);
+    setError('');
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business_name: form.business_name || 'My Business', onboarding_completed: true }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg = body?.error || `Server error (${res.status})`;
+        setError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+        return;
+      }
+
+      router.push('/dashboard');
+    } catch (err) {
+      setError('Network error — please check your connection and try again.');
+      console.error('[onboarding] handleSkip error:', err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white';
@@ -113,6 +150,14 @@ export function OnboardingClient() {
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+
+          {/* FIX: error banner — shows the API error so user knows what went wrong */}
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           {/* Step 1 */}
           {step === 0 && (
             <div className="space-y-4">
@@ -292,13 +337,13 @@ export function OnboardingClient() {
                   <ArrowLeft size={15} /> Back
                 </button>
               )}
-              <button onClick={handleSkip} className="text-sm text-gray-400 hover:text-gray-600 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+              <button onClick={handleSkip} disabled={loading} className="text-sm text-gray-400 hover:text-gray-600 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50">
                 Skip setup
               </button>
             </div>
             {step < STEPS.length - 1 ? (
               <button
-                onClick={() => setStep(s => s + 1)}
+                onClick={() => { setError(''); setStep(s => s + 1); }}
                 disabled={step === 0 && !form.business_name}
                 className="flex items-center gap-1.5 bg-indigo-600 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >

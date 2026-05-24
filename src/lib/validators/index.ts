@@ -13,7 +13,13 @@ export const lineItemSchema = z.object({
 // ─── BUSINESS PROFILE ───────────────────────────────────────────
 export const businessProfileSchema = z.object({
   business_name: z.string().min(1, 'Business name is required').max(200),
-  email: z.string().email('Invalid email').or(z.literal('')).optional(),
+  // FIX: z.preprocess converts '' → undefined before validation so .optional() works correctly.
+  // The old z.string().email().or(z.literal('')) pattern fails because Zod tries .email() first,
+  // rejects '', then tries z.literal('') — but the union resolution is unreliable in some Zod versions.
+  email: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().email('Invalid email').optional()
+  ),
   phone: z.string().max(20).optional(),
   address: z.string().max(500).optional(),
   city: z.string().max(100).optional(),
@@ -37,7 +43,11 @@ export const businessProfileSchema = z.object({
 export const clientSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().min(1, 'Client name is required').max(200),
-  email: z.string().email('Invalid email').or(z.literal('')).optional(),
+  // FIX: same empty-string email fix applied here
+  email: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().email('Invalid email').optional()
+  ),
   phone: z.string().max(20).optional(),
   address: z.string().max(500).optional(),
   city: z.string().max(100).optional(),
@@ -62,7 +72,11 @@ export const documentSchema = z.object({
   template: z.enum(['classic', 'modern', 'minimal', 'bold']).default('classic'),
   client_id: z.string().uuid().nullable().optional(),
   client_name: z.string().max(200).optional(),
-  client_email: z.string().email().or(z.literal('')).optional(),
+  // FIX: same empty-string email fix applied here
+  client_email: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().email().optional()
+  ),
   client_address: z.string().max(500).optional(),
   client_phone: z.string().max(20).optional(),
   issue_date: z.string().min(1, 'Issue date is required'),
