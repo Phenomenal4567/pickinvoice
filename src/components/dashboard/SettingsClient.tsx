@@ -44,14 +44,27 @@ export function SettingsClient({ profile: initial }: { profile: BusinessProfile 
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) { alert('Logo must be under 2MB'); return; }
-    setLogoPreview(URL.createObjectURL(file));
+    const blobUrl = URL.createObjectURL(file);
+    setLogoPreview(blobUrl);
     setLogoUploading(true);
-    const fd = new FormData();
-    fd.append('file', file);
-    const res = await fetch('/api/upload', { method: 'POST', body: fd });
-    const { logo_url } = await res.json();
-    setProfile(p => ({ ...p, logo_url }));
-    setLogoUploading(false);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      if (!res.ok) throw new Error('Upload failed');
+      const { logo_url } = await res.json();
+      // Set the real URL first, THEN revoke the blob to avoid a broken-image flash
+      setLogoPreview(logo_url);
+      setProfile(p => ({ ...p, logo_url }));
+      // Defer revocation to next tick so <Image> has time to swap src
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 500);
+    } catch {
+      alert('Logo upload failed. Please try again.');
+      setLogoPreview(profile.logo_url || '');
+      URL.revokeObjectURL(blobUrl);
+    } finally {
+      setLogoUploading(false);
+    }
   }
 
 async function handleSave() {
@@ -315,11 +328,13 @@ async function handleSave() {
               >
                 {logoPreview ? (
                   <Image
+  key={logoPreview}
   src={logoPreview}
   alt="Logo"
   width={80}
   height={80}
   className="h-20 w-20 rounded-lg object-cover"
+  unoptimized={logoPreview.startsWith('blob:')}
 />
                 ) : (
                   <div className="text-center">

@@ -17,7 +17,8 @@ export const businessProfileSchema = z.object({
   phone: z.string().max(20).optional(),
   address: z.string().max(500).optional(),
   city: z.string().max(100).optional(),
-  state: z.string().max(100).optional(),
+  state: z.string().max(100).optional().default(''),
+  lga: z.string().max(100).optional().default(''),
   country: z.string().max(100).optional(),
   tax_number: z.string().max(50).optional(),
   reg_number: z.string().max(50).optional(),
@@ -29,6 +30,7 @@ export const businessProfileSchema = z.object({
   receipt_prefix: z.string().max(10).optional(),
   preferred_template: z.enum(['classic', 'modern', 'minimal', 'bold']).optional(),
   onboarding_completed: z.boolean().optional(),
+  logo_url: z.string().max(2048).optional().default(''),
 });
 
 // ─── CLIENT ─────────────────────────────────────────────────────
