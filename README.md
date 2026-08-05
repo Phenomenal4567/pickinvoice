@@ -1,4 +1,4 @@
-# PickInvoice v2.0 — Next.js + Supabase
+# EaseFlow v2.0 — Next.js + Supabase
 
 **WhatsApp-native invoice & receipt generator for Nigerian/African businesses.**
 
@@ -331,4 +331,5 @@ PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable   # Linux
 ```
 Or skip the env var — the route auto-detects common install paths.
 #   p i c k i n v o i c e  
+ #   e a s e f l o w  
  
